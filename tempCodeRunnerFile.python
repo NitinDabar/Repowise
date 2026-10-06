@@ -1,0 +1,166 @@
+from typing import TypedDict
+from langgraph.graph import StateGraph, START, END
+from langchain_ollama import ChatOllama
+
+
+# -----------------------------
+# 1. LLM
+# -----------------------------
+
+llm = ChatOllama(
+    model="llama3.2:3b",
+    temperature=0
+)
+
+
+# -----------------------------
+# 2. State
+# -----------------------------
+
+class ScriptState(TypedDict):
+    script: str
+    corrected_script: str
+    formatted_script: str
+    translated_script: str
+    target_language: str
+
+
+# -----------------------------
+# 3. Grammar + typo correction
+# -----------------------------
+
+def correct_script(state: ScriptState):
+
+    script = state["script"]
+
+    prompt = f"""
+You are a professional editor.
+
+Correct the following script.
+
+Tasks:
+- Fix grammar mistakes
+- Fix spelling mistakes
+- Fix typos
+- Improve sentence clarity
+- Do not change the original meaning
+- Do not add new information
+
+Script:
+
+{script}
+"""
+
+    response = llm.invoke(prompt)
+
+    return {
+        "corrected_script": response.content
+    }
+
+
+# -----------------------------
+# 4. Formatting
+# -----------------------------
+
+def format_script(state: ScriptState):
+
+    script = state["corrected_script"]
+
+    prompt = f"""
+Format the following script professionally.
+
+Requirements:
+- Create proper paragraphs
+- Add headings where appropriate
+- Improve readability
+- Keep the original meaning
+- Do not translate the script
+- Do not add new information
+
+Script:
+
+{script}
+"""
+
+    response = llm.invoke(prompt)
+
+    return {
+        "formatted_script": response.content
+    }
+
+
+# -----------------------------
+# 5. Translation
+# -----------------------------
+
+def translate_script(state: ScriptState):
+
+    script = state["formatted_script"]
+    language = state["target_language"]
+
+    prompt = f"""
+Translate the following script into {language}.
+
+Requirements:
+- Preserve the original meaning
+- Preserve the formatting
+- Do not add or remove information
+- Keep technical terms accurate
+
+Script:
+
+{script}
+"""
+
+    response = llm.invoke(prompt)
+
+    return {
+        "translated_script": response.content
+    }
+
+
+# -----------------------------
+# 6. Build LangGraph
+# -----------------------------
+
+graph = StateGraph(ScriptState)
+
+graph.add_node("correct", correct_script)
+graph.add_node("format", format_script)
+graph.add_node("translate", translate_script)
+
+graph.add_edge(START, "correct")
+graph.add_edge("correct", "format")
+graph.add_edge("format", "translate")
+graph.add_edge("translate", END)
+
+app = graph.compile()
+
+
+# -----------------------------
+# 7. Run pipeline
+# -----------------------------
+
+script = """
+today we are going to learn about artificial inteligence.
+AI is a technology which can help us solving many problems
+and it can also generate text images and code.
+"""
+
+result = app.invoke({
+    "script": script,
+    "corrected_script": "",
+    "formatted_script": "",
+    "translated_script": "",
+    "target_language": "Hindi"
+})
+
+
+print("\n--- CORRECTED ---")
+print(result["corrected_script"])
+
+print("\n--- FORMATTED ---")
+print(result["formatted_script"])
+
+print("\n--- TRANSLATED ---")
+print(result["translated_script"])
