@@ -89,13 +89,6 @@ RepoWise uses a RAG workflow to answer questions about source code.
 
 Repository identifiers and source-file metadata help associate retrieved chunks with the correct codebase.
 
-## 🚀 Future Improvements
-
-- Add source-file references and line numbers to generated answers.
-- Improve code-aware chunking and retrieval quality.
-- Support persistent indexing for multiple repositories.
-- Add ingestion progress tracking and error handling.
-- Implement authentication, rate limiting, and automated tests.
 
 ## 🎯 Goal
 
